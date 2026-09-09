@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Article TTS Reader",
+  "version": "0.1.0",
+  "description": "Read a webpage's main article with a local or hosted OpenAI-compatible neural TTS endpoint.",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "offscreen",
+    "scripting",
+    "storage"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Article TTS Reader"
+  }
+}
