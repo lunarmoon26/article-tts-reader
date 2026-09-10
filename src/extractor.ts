@@ -1,6 +1,6 @@
 import { Readability } from "@mozilla/readability";
 
-function normaliseText(text) {
+function normaliseText(text: string) {
   return text
     .split("\n")
     .map((line) => line.replace(/\s+/g, " ").trim())
@@ -8,24 +8,45 @@ function normaliseText(text) {
     .join("\n\n");
 }
 
-function articleTitle(title) {
+function articleTitle(title: string) {
   return String(title || "Article")
     .split(/\s+[|–—]\s+/)[0]
     .trim() || "Article";
 }
 
-function textFromSemanticFallback() {
-  const candidates = [...document.querySelectorAll("article, main, [role='main']")]
+function textFromSelectors(selectors: string[], minimumLength: number) {
+  const elements = [...new Set<HTMLElement>(selectors.flatMap((selector) => [...document.querySelectorAll<HTMLElement>(selector)]))];
+  const candidates = elements
     .map((element) => ({ element, text: normaliseText(element.innerText || element.textContent || "") }))
-    .filter(({ text }) => text.length >= 400)
+    .filter(({ text }) => text.length >= minimumLength)
     .sort((a, b) => b.text.length - a.text.length);
 
   return candidates[0]?.text || "";
 }
 
+function textFromSemanticFallback() {
+  return textFromSelectors([
+    "article",
+    "[itemprop~='articleBody']",
+    ".article-content",
+    ".article-body",
+    ".post-content",
+    ".post-body",
+    ".entry-content",
+    ".story-body",
+    "main",
+    "[role='main']"
+  ], 400);
+}
+
 globalThis.__articleTtsReaderExtractMainArticle = () => {
   try {
-    const clonedDocument = document.cloneNode(true);
+    const markedText = textFromSelectors(["[data-tts-content]"], 1);
+    if (markedText) {
+      return { title: articleTitle(document.title), text: markedText };
+    }
+
+    const clonedDocument = document.cloneNode(true) as Document;
     const article = new Readability(clonedDocument).parse();
     const text = normaliseText(article?.textContent || "");
 

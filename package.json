@@ -5,14 +5,17 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node scripts/test-tts-request.mjs && node scripts/test-extraction.mjs",
-    "verify": "npm run build && node scripts/verify-build.mjs"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && npm run build && node scripts/test-tts-request.mjs && node scripts/test-popup.mjs && node scripts/test-extraction.mjs && node scripts/test-website-controls.mjs",
+    "test:openai": "node --env-file=.env scripts/test-openai-tts.mjs",
+    "verify": "npm run typecheck && npm run build && node scripts/verify-build.mjs"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
-    "jsdom": "^26.0.0"
+    "jsdom": "^26.0.0",
+    "typescript": "^5.9.3"
   }
 }

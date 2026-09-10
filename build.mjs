@@ -3,13 +3,17 @@ import { cp, mkdir, rm } from "node:fs/promises";
 
 const staticFiles = [
   "manifest.json",
-  "background.js",
   "offscreen.html",
-  "offscreen.js",
-  "tts-request.js",
   "popup.html",
-  "popup.css",
-  "popup.js"
+  "popup.css"
+];
+
+const extensionEntryPoints = [
+  "src/background.ts",
+  "src/offscreen.ts",
+  "src/tts-request.ts",
+  "src/website-bridge.ts",
+  "src/popup.ts"
 ];
 
 await rm("dist", { recursive: true, force: true });
@@ -20,7 +24,17 @@ await Promise.all(
 );
 
 await build({
-  entryPoints: ["src/extractor.js"],
+  entryPoints: extensionEntryPoints,
+  outdir: "dist",
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "chrome114",
+  legalComments: "linked"
+});
+
+await build({
+  entryPoints: ["src/extractor.ts"],
   outfile: "dist/extractor.js",
   bundle: true,
   format: "iife",

@@ -32,19 +32,31 @@
           API key <span>(optional for local servers)</span>
           <input id="api-key" type="password" autocomplete="off" spellcheck="false">
         </label>
-        <div class="row">
-          <label>
-            Model
-            <input id="model" required spellcheck="false">
-          </label>
-          <label>
-            Voice
-            <input id="voice" required spellcheck="false">
-          </label>
-          <label>
-            Speed
-          <input id="speed" type="number" min="0.5" max="2" step="0.05" required>
-          </label>
+        <div id="speech-options">
+          <div class="row speech-options-row">
+            <label>
+              Model
+              <select id="model" required></select>
+            </label>
+            <label>
+              Voice
+              <select id="voice" required></select>
+            </label>
+            <label>
+              Speed
+              <input id="speed" type="number" min="0.5" max="2" step="0.05" required>
+            </label>
+          </div>
+          <div id="custom-speech-options" class="row" hidden>
+            <label id="custom-model-setting" hidden>
+              Custom model
+              <input id="custom-model" spellcheck="false">
+            </label>
+            <label id="custom-voice-setting" hidden>
+              Custom voice
+              <input id="custom-voice" spellcheck="false">
+            </label>
+          </div>
         </div>
         <section id="gpt-sovits-settings" hidden>
           <h2>GPT-SoVITS reference voice</h2>
@@ -71,6 +83,25 @@
         <button id="save" type="submit">Save endpoint</button>
       </form>
 
+      <section id="website-controls-settings" aria-labelledby="website-controls-heading">
+        <h2 id="website-controls-heading">Website controls</h2>
+        <p>Enable the page controls only on websites you explicitly whitelist. Chrome asks for access to each enabled pattern.</p>
+        <label class="checkbox-label">
+          <input id="website-controls-enabled" type="checkbox">
+          Enable website controls
+        </label>
+        <label>
+          Website URL patterns <span>(one HTTPS pattern per line, ending in <code>*</code>)</span>
+          <textarea id="website-patterns" rows="3" spellcheck="false"></textarea>
+        </label>
+        <label class="checkbox-label">
+          <input id="website-dev-mode" type="checkbox">
+          Development mode: localhost:3000/posts/*
+        </label>
+        <p>Requires website controls enabled. Allows HTTP only at localhost port 3000; reload your local page after saving.</p>
+        <button id="save-website-controls" type="button">Save website controls</button>
+      </section>
+
       <section class="controls" aria-label="Playback controls">
         <button id="read" class="primary" type="button">Read main article</button>
         <div class="row">
@@ -80,6 +111,11 @@
         </div>
       </section>
 
+      <section id="playback-task" hidden aria-live="polite">
+        <p class="task-label">Current reading</p>
+        <strong id="playback-title"></strong>
+        <progress id="playback-progress" hidden></progress>
+      </section>
       <p id="status" role="status">Save an endpoint, then open an article.</p>
       <p class="privacy">Article text and an optional key are sent only to the endpoint you save. Keys stay in Chrome local extension storage.</p>
     </main>
