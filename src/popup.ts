@@ -126,8 +126,9 @@ function renderPlayback(playback) {
   playbackProgress.max = progress.total || 1;
   playbackProgress.value = Math.min(progress.current || 0, playbackProgress.max);
   setStatus(playback?.message || "Save an endpoint, then open an article.", playback?.status === "error" ? "error" : "ready");
+  $("#play").textContent = playback?.status === "paused" ? "Resume" : "Play";
+  $("#play").disabled = active && playback.status !== "paused";
   $("#pause").disabled = !active || playback.status === "paused";
-  $("#resume").disabled = !active || playback.status !== "paused";
   $("#stop").disabled = !active;
 }
 
@@ -276,10 +277,15 @@ fields.voice.addEventListener("change", () => {
   renderSpeechOptions(fields.provider.value, selectedSpeechValue(fields.model, fields.customModel), selectedSpeechValue(fields.voice, fields.customVoice));
 });
 
-$("#read").addEventListener("click", async () => {
+$("#play").addEventListener("click", async () => {
   try {
-    await saveSettings();
-    await sendMessage({ type: "START_ARTICLE" });
+    const { playback: currentPlayback } = await sendMessage({ type: "GET_PLAYBACK_STATUS" });
+    if (currentPlayback.status === "paused") {
+      await sendMessage({ type: "CONTROL_PLAYBACK", action: "resume" });
+    } else if (!currentPlayback.active) {
+      await saveSettings();
+      await sendMessage({ type: "START_ARTICLE" });
+    }
     const { playback } = await sendMessage({ type: "GET_PLAYBACK_STATUS" });
     renderPlayback(playback);
   } catch (error) {
@@ -287,7 +293,7 @@ $("#read").addEventListener("click", async () => {
   }
 });
 
-for (const action of ["pause", "resume", "stop"]) {
+for (const action of ["pause", "stop"]) {
   $(`#${action}`).addEventListener("click", async () => {
     try {
       await sendMessage({ type: "CONTROL_PLAYBACK", action });

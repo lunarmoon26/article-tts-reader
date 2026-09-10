@@ -19,7 +19,7 @@ The blog repository has not mounted its control surface yet. Until it does, the 
 
 ## Trust boundary
 
-The extension dynamically registers one content script for enabled patterns:
+The extension dynamically registers one inert content script at each enabled origin so that client-side navigation can reach a post without a full reload. The background accepts commands only when the current page URL matches the configured path pattern:
 
 ```js
 chrome.scripting.registerContentScripts([{
@@ -31,7 +31,7 @@ chrome.scripting.registerContentScripts([{
 }]);
 ```
 
-Chrome grants each enabled pattern before registration. That host permission lets the existing background extractor run for a website-initiated start without an `activeTab` gesture. The bridge runs only in the top frame. It accepts only protocol version `1`, well-formed action names, and requests originating from that matched document. It does not use `externally_connectable`, automatic broad page matches, localhost matches, or user-controlled endpoint URLs. An enabled pattern must be an exact HTTPS host path ending in `*`, such as `https://example.com/posts/*`; wildcard hosts are rejected.
+Chrome grants each enabled pattern before registration. Host permissions apply to an origin rather than a path, and the bridge registration uses that origin so a Next.js-style client-side navigation can reach a matching post. That does not authorize homepage or other-path controls: the bridge forwards its current URL and the background validates it against the configured path before every command or status request. The bridge runs only in the top frame. It accepts only protocol version `1`, well-formed action names, and requests originating from that matched document. It does not use `externally_connectable`, automatic third-party site registration, localhost matches outside development mode, or user-controlled endpoint URLs. An enabled pattern must be an exact HTTPS host path ending in `*`, such as `https://example.com/posts/*`; wildcard hosts are rejected.
 
 The DOM event boundary is appropriate because the page and the content script share the same document but do not share an extension runtime context. It is not an authorization mechanism outside the enabled whitelist. Disabling website controls unregisters the bridge; it does not automatically revoke an already-granted Chrome host permission.
 
@@ -39,7 +39,7 @@ The DOM event boundary is appropriate because the page and the content script sh
 
 ### Local development exception
 
-The popup's opt-in development mode adds `http://localhost:3000/posts/*` while website controls are enabled. It is off by default. Chrome registration and permission requests use `http://localhost/posts/*` because match patterns cannot restrict ports; the bridge and background restrict runtime access to port 3000 and `/posts/`. Other HTTP hosts and ports remain unauthorized. Disabling development mode blocks local requests and notifications; enabling requires saving, granting Chrome access, and reloading the page. This is the sole exception to the HTTPS-only whitelist above.
+The popup's opt-in development mode adds `http://localhost:3000/posts/*` while website controls are enabled. It is off by default. Chrome registration and permission requests use `http://localhost/*` because match patterns cannot restrict ports and the bridge must survive client-side navigation; the bridge and background restrict runtime access to port 3000 and `/posts/`. Other HTTP hosts and ports remain unauthorized. Disabling development mode blocks local requests and notifications; enabling requires saving, granting Chrome access, and reloading the page. This is the sole exception to the HTTPS-only whitelist above.
 
 All event details include `protocolVersion: 1`.
 
@@ -85,9 +85,9 @@ Background notifications target the source document and check that its whitelist
 
 ## Planned blog behavior
 
-The blog adds a client-side Article TTS Reader control beneath a post cover image and above its date. Initial rendering keeps **Start**, **Pause**, and **Stop** disabled while it requests bridge status.
+The blog adds a client-side Article TTS Reader control beneath a post cover image and above its date. Initial rendering keeps **Play**, **Pause**, and **Stop** disabled while it requests bridge status.
 
-- When `ready` arrives, **Start** enables for idle, complete, stopped, and error states. **Pause** enables only while playback is active and changes to **Resume** when paused. **Stop** enables while the session is active.
+- When `ready` arrives, **Play** starts idle, complete, stopped, and error states and resumes paused playback. **Pause** enables while playback is active and not paused. **Stop** enables while the session is active.
 - The status line displays the bridge message and chunk progress when `progress.total` is non-zero.
 - When no `ready` event arrives within the documented detection timeout, controls remain disabled and the status line links to `https://github.com/lunarmoon26/article-tts-reader`. That URL is the single replaceable installation destination until a Chrome Web Store listing exists.
 - The global footer link is removed. The project index keeps the repository listing.

@@ -32,11 +32,11 @@ Open a normal HTTP(S) article, click the extension, save your endpoint settings,
 
 ## Website controls
 
-The popup's **Website controls** section is disabled by default and starts with `https://blog.haochuanz.net/posts/*`. Enable it to grant that exact site path access, or replace/add one HTTPS host-path pattern per line (for example, `https://example.com/posts/*`). Wildcard hosts, ports, queries, and HTTP patterns are rejected. Chrome prompts for each enabled pattern; disabling the controls unregisters the bridge but keeps any Chrome permission already granted.
+The popup's **Website controls** section is disabled by default and starts with `https://blog.haochuanz.net/posts/*`. Enable it to grant that exact site path access, or replace/add one HTTPS host-path pattern per line (for example, `https://example.com/posts/*`). Wildcard hosts, ports, queries, and HTTP patterns are rejected. Chrome grants host access at the origin level, so the bridge is loaded across that enabled origin to support client-side navigation, but it accepts commands only on the configured path. Disabling the controls unregisters the bridge but keeps any Chrome permission already granted.
 
 An enabled page can start and manage reading only for its own tab, and receives only sanitized playback status. It never receives endpoint settings, API keys, session IDs, or another tab's playback. The protocol is documented in [`docs/blog-website-controls-protocol.md`](docs/blog-website-controls-protocol.md).
 
-For local development, enable **Website controls** and **Development mode: localhost:3000/posts/***, then save, approve Chrome access, and reload your local post. Development mode is off by default and allows only `http://localhost:3000/posts/*`. Chrome's host permissions and script match patterns cannot restrict ports, so the registration uses `http://localhost/posts/*`; the bridge and background enforce port 3000 at runtime. Disabling development mode blocks local commands and status updates without changing your HTTPS whitelist.
+For local development, enable **Website controls** and **Development mode: localhost:3000/posts/***, then save, approve Chrome access, and reload your local post. Development mode is off by default and allows only `http://localhost:3000/posts/*`. Chrome's host permissions and script match patterns cannot restrict ports, so the registration uses `http://localhost/*`; the bridge and background enforce port 3000 and `/posts/` at runtime. Disabling development mode blocks local commands and status updates without changing your HTTPS whitelist.
 
 ## Models and voices
 

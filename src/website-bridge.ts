@@ -53,7 +53,7 @@ function sendResult(requestId, response) {
 
 async function forward(requestId, action) {
   try {
-    const response = await chrome.runtime.sendMessage({ type: "WEBSITE_CONTROL", action });
+    const response = await chrome.runtime.sendMessage({ type: "WEBSITE_CONTROL", action, pageUrl: window.location.href });
     if (response?.playback) dispatch(STATUS_EVENT, {
       protocolVersion: PROTOCOL_VERSION,
       playback: normalizePlayback(response.playback)
@@ -68,10 +68,7 @@ function validDetail(detail) {
   return isRecord(detail) && detail.protocolVersion === PROTOCOL_VERSION && isRequestId(detail.requestId);
 }
 
-const allowedDevelopmentLocation = window.location.protocol !== "http:" || (
-  window.location.hostname === "localhost" && window.location.port === "3000" && window.location.pathname.startsWith("/posts/")
-);
-if (window.top === window && allowedDevelopmentLocation) {
+if (window.top === window) {
   document.addEventListener(REQUEST_STATUS_EVENT, (event) => {
     const detail = (event as CustomEvent).detail;
     if (!validDetail(detail)) return;
@@ -92,6 +89,4 @@ if (window.top === window && allowedDevelopmentLocation) {
       playback: normalizePlayback(message.playback)
     });
   });
-
-  sendReady();
 }
