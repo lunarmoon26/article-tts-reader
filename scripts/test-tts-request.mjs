@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createTtsRequest } from "../src/tts-request.js";
+import { createTtsRequest } from "../dist/tts-request.js";
 
 const common = {
   endpoint: "http://127.0.0.1:8880/v1/audio/speech",
@@ -17,6 +17,24 @@ assert.deepEqual(createTtsRequest("Hello", { ...common, provider: "openai-compat
     input: "Hello",
     voice: "af_bella",
     response_format: "mp3",
+    speed: 1
+  }
+});
+
+assert.deepEqual(createTtsRequest("Hello", {
+  ...common,
+  provider: "orpheus",
+  endpoint: "http://127.0.0.1:5005/v1/audio/speech",
+  model: "orpheus",
+  voice: "tara"
+}), {
+  endpoint: "http://127.0.0.1:5005/v1/audio/speech",
+  headers: { "Content-Type": "application/json" },
+  body: {
+    model: "orpheus",
+    input: "Hello",
+    voice: "tara",
+    response_format: "wav",
     speed: 1
   }
 });
