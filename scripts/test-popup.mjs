@@ -78,7 +78,19 @@ assert.equal(document.querySelector("#playback-task").hidden, false);
 assert.equal(document.querySelector("#playback-title").textContent, "Test article");
 assert.equal(document.querySelector("#playback-progress").value, 2);
 assert.equal(document.querySelector("#playback-progress").max, 8);
+assert.equal(document.querySelector("#play").disabled, true);
+assert.equal(document.querySelector("#pause").disabled, false);
+assert.equal(document.querySelector("#stop").disabled, false);
+assert.equal(document.querySelector("#resume"), null);
 assert.equal(document.querySelector("#website-controls-enabled").checked, false);
 assert.equal(document.querySelector("#website-patterns").value, "https://blog.haochuanz.net/posts/*");
+
+listeners.forEach((listener) => listener({
+  type: "STATUS_UPDATE",
+  playback: { status: "paused", message: "Playback paused.", active: true, progress: { current: 2, total: 8 } }
+}));
+assert.equal(document.querySelector("#play").textContent, "Resume");
+assert.equal(document.querySelector("#play").disabled, false);
+assert.equal(document.querySelector("#pause").disabled, true);
 
 console.log("Popup model, voice, and playback-status tests passed.");

@@ -40,12 +40,14 @@ const DEFAULT_WEBSITE_CONTROLS = {
 };
 const WEBSITE_BRIDGE_SCRIPT_ID = "article-tts-reader-website-bridge";
 const DEV_WEBSITE_PATTERN = "http://localhost:3000/posts/*";
-const DEV_CHROME_PATTERN = "http://localhost/posts/*";
+const DEV_CHROME_PATTERN = "http://localhost/*";
 function websitePatterns(controls) {
   return [...controls.patterns, ...(controls.devMode ? [DEV_WEBSITE_PATTERN] : [])];
 }
 function chromeWebsitePattern(pattern) {
-  return pattern === DEV_WEBSITE_PATTERN ? DEV_CHROME_PATTERN : pattern;
+  if (pattern === DEV_WEBSITE_PATTERN) return DEV_CHROME_PATTERN;
+  const url = new URL(pattern);
+  return `${url.protocol}//${url.hostname}/*`;
 }
 let websiteBridgeSync: Promise<any> = Promise.resolve();
 
@@ -125,7 +127,7 @@ async function reconcileWebsiteBridge(controls) {
   }
   await chrome.scripting.registerContentScripts([{
     id: WEBSITE_BRIDGE_SCRIPT_ID,
-    matches,
+    matches: [...new Set(matches)],
     js: ["website-bridge.js"],
     runAt: "document_start",
     persistAcrossSessions: true
@@ -455,11 +457,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   });
 });
 
-async function websiteSender(sender) {
+async function websiteSender(message, sender) {
   if (!Number.isInteger(sender?.tab?.id) || sender.frameId !== 0 || typeof sender.documentId !== "string") return;
   let matchingPattern;
   try {
-    const url = new URL(sender.url);
+    if (typeof message.pageUrl !== "string") return;
+    const url = new URL(message.pageUrl);
     const controls = await getWebsiteControls();
     if (!controls.enabled) return;
     matchingPattern = websitePatterns(controls).find((pattern) => url.href.startsWith(pattern.slice(0, -1)));
@@ -467,7 +470,7 @@ async function websiteSender(sender) {
   } catch {
     return;
   }
-  return { tabId: sender.tab.id, documentId: sender.documentId, pattern: matchingPattern, url: sender.url };
+  return { tabId: sender.tab.id, documentId: sender.documentId, pattern: matchingPattern, url: message.pageUrl };
 }
 
 async function websitePlaybackForTab({ tabId, documentId, url }) {
@@ -538,7 +541,7 @@ async function controlWebsitePlayback(websiteSource, action) {
 }
 
 async function handleWebsiteControl(message, sender) {
-  const websiteSource = await websiteSender(sender);
+  const websiteSource = await websiteSender(message, sender);
   if (!websiteSource || !WEBSITE_COMMANDS.has(message.action)) {
     return { ok: false, error: "This request is not available." };
   }

@@ -47,14 +47,14 @@ for (const [name, bucket] of Object.entries(bridgeEvents)) {
 }
 
 await import(`../dist/website-bridge.js?bridgeTest=${Date.now()}`);
-assert.deepEqual(bridgeEvents.ready, [{ protocolVersion: 1 }]);
+assert.deepEqual(bridgeEvents.ready, []);
 
 document.dispatchEvent(new CustomEvent("article-tts-reader:request-status", {
   detail: { protocolVersion: 1, requestId: "status-1" }
 }));
 await tick();
-assert.deepEqual(bridgeMessages, [{ type: "WEBSITE_CONTROL", action: "status" }]);
-assert.equal(bridgeEvents.ready.length, 2);
+assert.deepEqual(bridgeMessages, [{ type: "WEBSITE_CONTROL", action: "status", pageUrl: "https://blog.haochuanz.net/posts/test" }]);
+assert.equal(bridgeEvents.ready.length, 1);
 assert.deepEqual(bridgeEvents.status.at(-1), {
   protocolVersion: 1,
   playback: {
@@ -71,7 +71,7 @@ document.dispatchEvent(new CustomEvent("article-tts-reader:command", {
   detail: { protocolVersion: 1, requestId: "pause-1", action: "pause" }
 }));
 await tick();
-assert.deepEqual(bridgeMessages.at(-1), { type: "WEBSITE_CONTROL", action: "pause" });
+assert.deepEqual(bridgeMessages.at(-1), { type: "WEBSITE_CONTROL", action: "pause", pageUrl: "https://blog.haochuanz.net/posts/test" });
 assert.deepEqual(bridgeEvents.result.at(-1), { protocolVersion: 1, requestId: "pause-1", ok: true });
 
 const messageCount = bridgeMessages.length;
@@ -187,7 +187,7 @@ const backgroundListener = backgroundListeners[0];
 function websiteRequest(message, tabId, url = "https://blog.haochuanz.net/posts/test", documentId = `document-${tabId}`) {
   tabUrls.set(tabId, url);
   return new Promise((resolve) => {
-    backgroundListener(message, { tab: { id: tabId }, url, documentId, frameId: 0 }, resolve);
+    backgroundListener({ ...message, ...(message.type === "WEBSITE_CONTROL" ? { pageUrl: url } : {}) }, { tab: { id: tabId }, url, documentId, frameId: 0 }, resolve);
   });
 }
 
@@ -273,7 +273,7 @@ assert.deepEqual(configured.websiteControls, {
 });
 assert.deepEqual(bridgeRegistrations.at(-1), [{
   id: "article-tts-reader-website-bridge",
-  matches: ["https://reader.example/articles/*"],
+  matches: ["https://reader.example/*"],
   js: ["website-bridge.js"],
   runAt: "document_start",
   persistAcrossSessions: true
@@ -312,7 +312,7 @@ assert.equal((await websiteRequest({ type: "WEBSITE_CONTROL", action: "status" }
 await websiteRequest({ type: "SAVE_WEBSITE_CONTROLS", websiteControls: {
   enabled: true, devMode: true, patterns: ["https://reader.example/articles/*"]
 }}, 3);
-assert.ok(bridgeRegistrations.at(-1)[0].matches.includes("http://localhost/posts/*"));
+assert.ok(bridgeRegistrations.at(-1)[0].matches.includes("http://localhost/*"));
 assert.equal((await websiteRequest({ type: "WEBSITE_CONTROL", action: "status" }, 5, devUrl)).ok, true);
 for (const url of ["http://localhost:3001/posts/test", "http://localhost:3000/other/test", "http://127.0.0.1:3000/posts/test", "http://example.com/posts/test"]) {
   assert.equal((await websiteRequest({ type: "WEBSITE_CONTROL", action: "status" }, 5, url)).ok, false);
@@ -321,7 +321,7 @@ await websiteRequest({ type: "SAVE_WEBSITE_CONTROLS", websiteControls: {
   enabled: true, devMode: false, patterns: ["https://reader.example/articles/*"]
 }}, 3);
 assert.equal((await websiteRequest({ type: "WEBSITE_CONTROL", action: "status" }, 5, devUrl)).ok, false);
-assert.ok(!bridgeRegistrations.at(-1)[0].matches.includes("http://localhost/posts/*"));
+assert.ok(!bridgeRegistrations.at(-1)[0].matches.includes("http://localhost/*"));
 
 await websiteRequest({ type: "WEBSITE_CONTROL", action: "start" }, 6, "https://reader.example/articles/one");
 const navigatingSession = sessionStorage.playback.sessionId;
