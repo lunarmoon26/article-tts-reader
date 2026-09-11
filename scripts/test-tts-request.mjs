@@ -9,7 +9,7 @@ const common = {
   speed: 1
 };
 
-assert.deepEqual(createTtsRequest("Hello", { ...common, provider: "openai-compatible" }), {
+assert.deepEqual(createTtsRequest("Hello", { ...common, provider: "kokoro" }), {
   endpoint: common.endpoint,
   headers: { "Content-Type": "application/json" },
   body: {
@@ -23,49 +23,30 @@ assert.deepEqual(createTtsRequest("Hello", { ...common, provider: "openai-compat
 
 assert.deepEqual(createTtsRequest("Hello", {
   ...common,
-  provider: "orpheus",
-  endpoint: "http://127.0.0.1:5005/v1/audio/speech",
-  model: "orpheus",
-  voice: "tara"
+  provider: "cosyvoice",
+  endpoint: "http://127.0.0.1:8080/v1/audio/speech",
+  model: "cosyvoice",
+  voice: "Chinese Female"
 }), {
-  endpoint: "http://127.0.0.1:5005/v1/audio/speech",
+  endpoint: "http://127.0.0.1:8080/v1/audio/speech",
   headers: { "Content-Type": "application/json" },
   body: {
-    model: "orpheus",
+    model: "cosyvoice",
     input: "Hello",
-    voice: "tara",
-    response_format: "wav",
+    voice: "Chinese Female",
+    response_format: "mp3",
     speed: 1
   }
 });
 
 assert.deepEqual(createTtsRequest("Hello", {
   ...common,
-  provider: "gpt-sovits",
-  endpoint: "http://127.0.0.1:9880/tts",
-  gptSovitsTextLanguage: "en",
-  gptSovitsReferenceAudioPath: "/voices/narrator.wav",
-  gptSovitsReferenceText: "Reference words.",
-  gptSovitsReferenceLanguage: "en"
+  provider: "higgs",
+  endpoint: "http://127.0.0.1:8000/v1/audio/speech"
 }), {
-  endpoint: "http://127.0.0.1:9880/tts",
+  endpoint: "http://127.0.0.1:8000/v1/audio/speech",
   headers: { "Content-Type": "application/json" },
-  body: {
-    text: "Hello",
-    text_lang: "en",
-    ref_audio_path: "/voices/narrator.wav",
-    prompt_text: "Reference words.",
-    prompt_lang: "en",
-    text_split_method: "cut5",
-    speed_factor: 1,
-    media_type: "wav",
-    streaming_mode: false
-  }
+  body: { input: "Hello" }
 });
-
-assert.throws(
-  () => createTtsRequest("Hello", { ...common, provider: "gpt-sovits" }),
-  /reference audio path is required/
-);
 
 console.log("TTS request tests passed.");
