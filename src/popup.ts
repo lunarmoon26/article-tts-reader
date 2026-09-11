@@ -9,15 +9,10 @@ const fields = {
   customModel: $("#custom-model"),
   customVoice: $("#custom-voice"),
   speed: $("#speed"),
-  gptSovitsTextLanguage: $("#gpt-sovits-text-language"),
-  gptSovitsReferenceAudioPath: $("#gpt-sovits-reference-audio"),
-  gptSovitsReferenceText: $("#gpt-sovits-reference-text"),
-  gptSovitsReferenceLanguage: $("#gpt-sovits-reference-language"),
   websiteControlsEnabled: $("#website-controls-enabled"),
   websitePatterns: $("#website-patterns")
 };
 const status = $("#status");
-const gptSovitsSettings = $("#gpt-sovits-settings");
 const speechOptions = $("#speech-options");
 const customSpeechOptions = $("#custom-speech-options");
 const customModelSetting = $("#custom-model-setting");
@@ -28,23 +23,23 @@ const playbackProgress = $("#playback-progress");
 const CUSTOM_OPTION = "__custom__";
 
 const PRESETS = {
-  "openai-compatible": {
+  kokoro: {
     endpoint: "http://127.0.0.1:8880/v1/audio/speech",
     model: "kokoro",
     voice: "af_bella"
+  },
+  cosyvoice: {
+    endpoint: "http://127.0.0.1:8080/v1/audio/speech",
+    model: "cosyvoice",
+    voice: "Chinese Female"
   },
   chatterbox: {
     endpoint: "http://127.0.0.1:4123/v1/audio/speech",
     model: "chatterbox",
     voice: "default"
   },
-  orpheus: {
-    endpoint: "http://127.0.0.1:5005/v1/audio/speech",
-    model: "orpheus",
-    voice: "tara"
-  },
-  "gpt-sovits": {
-    endpoint: "http://127.0.0.1:9880/tts",
+  higgs: {
+    endpoint: "http://127.0.0.1:8000/v1/audio/speech",
     model: "not-used",
     voice: "not-used"
   },
@@ -58,7 +53,6 @@ const PRESETS = {
 const OPENAI_TTS_MODELS = ["gpt-4o-mini-tts", "tts-1", "tts-1-hd"];
 const OPENAI_TTS_VOICES = ["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse", "marin", "cedar"];
 const OPENAI_LEGACY_TTS_VOICES = ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"];
-const ORPHEUS_VOICES = ["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"];
 
 function modelOptions(provider) {
   if (provider === "openai") return OPENAI_TTS_MODELS;
@@ -69,12 +63,11 @@ function voiceOptions(provider, model) {
   if (provider === "openai") {
     return ["tts-1", "tts-1-hd"].includes(model) ? OPENAI_LEGACY_TTS_VOICES : OPENAI_TTS_VOICES;
   }
-  if (provider === "orpheus") return ORPHEUS_VOICES;
   return [PRESETS[provider]?.voice || ""];
 }
 
-function supportsCustomSpeechOptions(provider) {
-  return provider !== "gpt-sovits";
+function usesSpeechOptions(provider) {
+  return provider !== "higgs";
 }
 
 function selectedSpeechValue(select, customInput) {
@@ -92,7 +85,7 @@ function setOptions(select: any, values: string[], selected: string, supportsCus
 }
 
 function renderSpeechOptions(provider, model = selectedSpeechValue(fields.model, fields.customModel), voice = selectedSpeechValue(fields.voice, fields.customVoice)) {
-  const customOptionsAllowed = supportsCustomSpeechOptions(provider);
+  const customOptionsAllowed = usesSpeechOptions(provider);
   const selectedModel = model ?? PRESETS[provider]?.model ?? "";
   const modelIsKnown = setOptions(fields.model, modelOptions(provider), selectedModel, customOptionsAllowed);
   fields.customModel.value = modelIsKnown ? "" : selectedModel;
@@ -104,7 +97,7 @@ function renderSpeechOptions(provider, model = selectedSpeechValue(fields.model,
 
   const showCustomModel = fields.model.value === CUSTOM_OPTION;
   const showCustomVoice = fields.voice.value === CUSTOM_OPTION;
-  speechOptions.hidden = provider === "gpt-sovits";
+  speechOptions.hidden = !usesSpeechOptions(provider);
   customSpeechOptions.hidden = speechOptions.hidden || (!showCustomModel && !showCustomVoice);
   customModelSetting.hidden = !showCustomModel;
   customVoiceSetting.hidden = !showCustomVoice;
@@ -126,9 +119,8 @@ function renderPlayback(playback) {
   playbackProgress.max = progress.total || 1;
   playbackProgress.value = Math.min(progress.current || 0, playbackProgress.max);
   setStatus(playback?.message || "Save an endpoint, then open an article.", playback?.status === "error" ? "error" : "ready");
-  $("#play").textContent = playback?.status === "paused" ? "Resume" : "Play";
-  $("#play").disabled = active && playback.status !== "paused";
-  $("#pause").disabled = !active || playback.status === "paused";
+  $("#play").textContent = active && playback?.status !== "paused" ? "Pause" : "Play";
+  $("#play").disabled = false;
   $("#stop").disabled = !active;
 }
 
@@ -153,11 +145,7 @@ function settingsFromForm() {
     apiKey: fields.apiKey.value.trim(),
     model: selectedSpeechValue(fields.model, fields.customModel),
     voice: selectedSpeechValue(fields.voice, fields.customVoice),
-    speed: Number(fields.speed.value),
-    gptSovitsTextLanguage: fields.gptSovitsTextLanguage.value.trim(),
-    gptSovitsReferenceAudioPath: fields.gptSovitsReferenceAudioPath.value.trim(),
-    gptSovitsReferenceText: fields.gptSovitsReferenceText.value.trim(),
-    gptSovitsReferenceLanguage: fields.gptSovitsReferenceLanguage.value.trim()
+    speed: Number(fields.speed.value)
   };
 }
 
@@ -219,7 +207,7 @@ async function saveWebsiteControls() {
 
 async function saveSettings() {
   const settings = settingsFromForm();
-  const missingSpeechOption = settings.provider !== "gpt-sovits" && (!settings.model || !settings.voice);
+  const missingSpeechOption = usesSpeechOptions(settings.provider) && (!settings.model || !settings.voice);
   if (!settings.endpoint || missingSpeechOption || !Number.isFinite(settings.speed)) {
     throw new Error("Complete every required endpoint setting.");
   }
@@ -245,7 +233,6 @@ function setPreset(name) {
   fields.endpoint.value = preset.endpoint;
   renderSpeechOptions(name, preset.model, preset.voice);
   if (name !== "openai") fields.apiKey.value = "";
-  gptSovitsSettings.hidden = name !== "gpt-sovits";
 }
 
 $("#settings-form").addEventListener("submit", async (event) => {
@@ -280,7 +267,9 @@ fields.voice.addEventListener("change", () => {
 $("#play").addEventListener("click", async () => {
   try {
     const { playback: currentPlayback } = await sendMessage({ type: "GET_PLAYBACK_STATUS" });
-    if (currentPlayback.status === "paused") {
+    if (currentPlayback.active && currentPlayback.status !== "paused") {
+      await sendMessage({ type: "CONTROL_PLAYBACK", action: "pause" });
+    } else if (currentPlayback.status === "paused") {
       await sendMessage({ type: "CONTROL_PLAYBACK", action: "resume" });
     } else if (!currentPlayback.active) {
       await saveSettings();
@@ -293,7 +282,7 @@ $("#play").addEventListener("click", async () => {
   }
 });
 
-for (const action of ["pause", "stop"]) {
+for (const action of ["stop"]) {
   $(`#${action}`).addEventListener("click", async () => {
     try {
       await sendMessage({ type: "CONTROL_PLAYBACK", action });
@@ -314,11 +303,6 @@ fields.endpoint.value = settings.endpoint;
 fields.apiKey.value = settings.apiKey;
 renderSpeechOptions(settings.provider, settings.model, settings.voice);
 fields.speed.value = settings.speed;
-fields.gptSovitsTextLanguage.value = settings.gptSovitsTextLanguage;
-fields.gptSovitsReferenceAudioPath.value = settings.gptSovitsReferenceAudioPath;
-fields.gptSovitsReferenceText.value = settings.gptSovitsReferenceText;
-fields.gptSovitsReferenceLanguage.value = settings.gptSovitsReferenceLanguage;
-gptSovitsSettings.hidden = settings.provider !== "gpt-sovits";
 
 const { websiteControls } = await sendMessage({ type: "GET_WEBSITE_CONTROLS" });
 renderWebsiteControls(websiteControls);

@@ -17,10 +17,10 @@
         <label>
           TTS provider
           <select id="provider">
-            <option value="openai-compatible">OpenAI-compatible local/custom server</option>
+            <option value="kokoro">Kokoro 82M (local)</option>
+            <option value="cosyvoice">CosyVoice 2 (Vox Box)</option>
             <option value="chatterbox">Chatterbox TTS API</option>
-            <option value="orpheus">Orpheus-FastAPI</option>
-            <option value="gpt-sovits">GPT-SoVITS api_v2</option>
+            <option value="higgs">Higgs TTS 3 (local, research/non-commercial)</option>
             <option value="openai">OpenAI</option>
           </select>
         </label>
@@ -58,28 +58,6 @@
             </label>
           </div>
         </div>
-        <section id="gpt-sovits-settings" hidden>
-          <h2>GPT-SoVITS reference voice</h2>
-          <p>The reference audio path is resolved on the GPT-SoVITS server, not by this extension.</p>
-          <label>
-            Reference audio path
-            <input id="gpt-sovits-reference-audio" spellcheck="false">
-          </label>
-          <label>
-            Reference transcript <span>(recommended)</span>
-            <input id="gpt-sovits-reference-text">
-          </label>
-          <div class="row">
-            <label>
-              Article language
-              <input id="gpt-sovits-text-language" value="en" required spellcheck="false">
-            </label>
-            <label>
-              Reference language
-              <input id="gpt-sovits-reference-language" value="en" required spellcheck="false">
-            </label>
-          </div>
-        </section>
         <button id="save" type="submit">Save endpoint</button>
       </form>
 
@@ -105,7 +83,6 @@
       <section class="controls" aria-label="Playback controls">
         <div class="row">
           <button id="play" class="primary" type="button">Play</button>
-          <button id="pause" type="button">Pause</button>
           <button id="stop" type="button">Stop</button>
         </div>
       </section>
