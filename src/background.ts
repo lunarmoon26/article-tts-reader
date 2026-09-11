@@ -1,15 +1,24 @@
 const DEFAULT_SETTINGS = {
-  provider: "openai-compatible",
+  provider: "kokoro",
   endpoint: "http://127.0.0.1:8880/v1/audio/speech",
   apiKey: "",
   model: "kokoro",
   voice: "af_bella",
-  speed: 1,
-  gptSovitsTextLanguage: "en",
-  gptSovitsReferenceAudioPath: "",
-  gptSovitsReferenceText: "",
-  gptSovitsReferenceLanguage: "en"
+  speed: 1
 };
+const SUPPORTED_TTS_PROVIDERS = new Set(["kokoro", "cosyvoice", "chatterbox", "higgs", "openai"]);
+
+function normalizeTtsSettings(settings) {
+  if (settings.provider === "openai-compatible") return { ...settings, provider: "kokoro" };
+  return SUPPORTED_TTS_PROVIDERS.has(settings.provider) ? settings : { ...DEFAULT_SETTINGS };
+}
+
+async function getTtsSettings() {
+  const stored = await chrome.storage.local.get(DEFAULT_SETTINGS);
+  const settings = normalizeTtsSettings(stored);
+  if (settings.provider !== stored.provider) await chrome.storage.local.set(settings);
+  return settings;
+}
 
 let offscreenCreation;
 const pendingReadings = new Map();
@@ -321,7 +330,7 @@ async function startReading(tabId, selectedText = "", websiteSource = undefined)
   if (websiteSource?.documentId) pendingWebsiteDocuments.set(sessionId, websiteSource);
 
   try {
-    const settings = await chrome.storage.local.get(DEFAULT_SETTINGS);
+    const settings = await getTtsSettings();
 
     try {
       new URL(settings.endpoint);
@@ -565,7 +574,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     switch (message.type) {
       case "GET_SETTINGS":
-        sendResponse({ ok: true, settings: await chrome.storage.local.get(DEFAULT_SETTINGS) });
+        sendResponse({ ok: true, settings: await getTtsSettings() });
         return;
 
       case "GET_PLAYBACK_STATUS": {
@@ -594,7 +603,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
 
       case "SAVE_SETTINGS":
-        await chrome.storage.local.set({ ...DEFAULT_SETTINGS, ...message.settings });
+        await chrome.storage.local.set(normalizeTtsSettings({ ...DEFAULT_SETTINGS, ...message.settings }));
         sendResponse({ ok: true });
         return;
 
