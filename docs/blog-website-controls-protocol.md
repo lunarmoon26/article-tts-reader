@@ -1,6 +1,6 @@
 # Blog Website Controls Protocol
 
-**Status:** Partially implemented — extension bridge only; blog control surface pending
+**Status:** Implemented — extension bridge and blog control surface
 
 ## Purpose
 
@@ -11,11 +11,13 @@ The public page does not read or write endpoint settings, API keys, extension st
 ## Extension implementation
 
 - `src/manifest.json` declares no static website bridge. The background dynamically registers one only for patterns enabled in the user's settings and granted through Chrome's optional-host permission prompt.
-- `src/background.js` supports internal `GET_PLAYBACK_STATUS`, `START_ARTICLE`, `CONTROL_PLAYBACK`, and `STATUS_UPDATE` messages, plus sender-tab-scoped `WEBSITE_CONTROL` messages.
-- `src/extractor.js` already prefers `[data-tts-content]` over its Readability and semantic fallbacks.
+- `src/background.ts` supports internal `GET_PLAYBACK_STATUS`, `START_ARTICLE`, `CONTROL_PLAYBACK`, and `STATUS_UPDATE` messages, plus sender-tab-scoped `WEBSITE_CONTROL` messages.
+- `src/extractor.ts` already prefers `[data-tts-content]` over its Readability and semantic fallbacks.
 - `build.mjs` packages `website-bridge.js`, which turns the DOM event protocol into internal extension messages.
+- `lunarmoon26.github.io/src/app/posts/[slug]/page.tsx` mounts `ArticleTtsControls` on every post. `PostHeader` renders it between the cover image and post date.
+- `lunarmoon26.github.io/src/app/_components/article-tts-controls.tsx` owns the page control state, event validation, availability detection, command timeouts, and accessible button labels.
 
-The blog repository has not mounted its control surface yet. Until it does, the bridge has no visible page UI.
+The page control surface never reads endpoint settings, API keys, extension storage, tab IDs, session IDs, arbitrary article text, or a playback title. It consumes only the validated, sanitized playback fields it displays: status, message, progress, and active state.
 
 ## Trust boundary
 
@@ -83,18 +85,19 @@ Background notifications target the source document and check that its whitelist
 5. `writePlayback` sends the existing internal popup update and a targeted `chrome.tabs.sendMessage` update to the source tab. The bridge converts the targeted update into a sanitized `status` event.
 6. A missing content script or a non-matching page creates no error in the extension. The website simply receives no `ready` event.
 
-## Planned blog behavior
+## Website control behavior
 
-The blog adds a client-side Article TTS Reader control beneath a post cover image and above its date. Initial rendering keeps **Play**, **Pause**, and **Stop** disabled while it requests bridge status.
+Each post renders a **Listen with Article TTS Reader** control between its cover image and date. The control has an icon-only, accessible **Play/Pause** toggle and a **Stop** button.
 
-- When `ready` arrives, **Play** starts idle, complete, stopped, and error states and resumes paused playback. **Pause** enables while playback is active and not paused. **Stop** enables while the session is active.
-- The status line displays the bridge message and chunk progress when `progress.total` is non-zero.
-- When no `ready` event arrives within the documented detection timeout, controls remain disabled and the status line links to `https://github.com/lunarmoon26/article-tts-reader`. That URL is the single replaceable installation destination until a Chrome Web Store listing exists.
-- The global footer link is removed. The project index keeps the repository listing.
+- Initial state is `checking`: both buttons are disabled, the status line says that it is checking for the extension, and the component dispatches `article-tts-reader:request-status` after registering its `ready`, `status`, and `result` listeners.
+- A valid `ready` or `status` event marks the bridge available. If neither arrives within 1 second, the controls remain disabled, the status line explains that the extension must be installed and Website controls enabled for the site, and a link to `https://github.com/lunarmoon26/article-tts-reader` is shown.
+- The toggle sends `start` when playback is inactive, `pause` while active and not paused, and `resume` while paused. Stop is enabled only while playback is active.
+- While a command acknowledgement is pending, both controls are disabled. After 10 seconds without an acknowledgement, the control clears its pending state and reports a retryable timeout without claiming that playback stopped.
+- The status line displays the extension message and appends `Segment current of total.` when a positive progress total is available. The page does not display the sanitized playback title.
 
 ## Acceptance criteria
 
-1. A post without the extension shows disabled controls, an installation link, and no console error.
+1. A post without the extension shows disabled controls and an installation link after the 1-second detection timeout, with no console error.
 2. A post with the extension receives `ready`, displays the current state for that tab, and never exposes endpoint settings or another tab's playback details.
 3. Start reads the page's marked article body. Pause, resume, and stop affect only the same tab's session.
 4. Status transitions from loading through playing, paused, complete, stopped, or error update the post control without reopening the extension popup.
